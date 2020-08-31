@@ -1,6 +1,6 @@
 #include "driver/i2s.h"
 
-#define READ_DELAY 1000 // millisec
+#define READ_DELAY 3000 // millisec
 const i2s_port_t I2S_PORT = I2S_NUM_0;
 const int BLOCK_SIZE = 512;
 
@@ -10,12 +10,12 @@ void setup() {
 
     i2s_config_t audio_in_i2s_config = {
          .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_PDM),
-         .sample_rate = 48000,
-         .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+         .sample_rate = 44100,
+         .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
          .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // although the SEL config should be left, it seems to transmit on right
-         .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+         .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_LSB),
          .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, // high interrupt priority
-         .dma_buf_count = 4,
+         .dma_buf_count = 8,
          .dma_buf_len = BLOCK_SIZE
         };
     
@@ -48,23 +48,25 @@ void setup() {
 void loop() {
 
     // Read multiple samples at once and calculate the sound pressure
-    short samples[BLOCK_SIZE];
+    int samples[BLOCK_SIZE];
     int num_bytes_read = i2s_read_bytes(I2S_PORT, 
                                         (char *)samples, 
                                         BLOCK_SIZE,     // the doc says bytes, but its elements.
                                         portMAX_DELAY); // no timeout
-    int samples_read = num_bytes_read / 2;
+    int samples_read = num_bytes_read / 4;
     if (samples_read > 0) {
-      for(int i=0; i < samples_read; i++) {
-        Serial.println(samples[i]);
-      }
-      delay(5000);
+//      for(int i=0; i < samples_read; i++) {
+//        Serial.println(samples[i]);
+//      }
 //int nsamples = samples_read / 2;
-//      float sum = 0;
-//      for(int i=0; i < nsamples; i++) {
-//        sum += samples[i * 2 + 1];
-//      }    
-//      float avg = sum / nsamples;
+      float sum = 0;
+      for(int i=0; i < samples_read; i++) {
+        sum += samples[i];
+      }    
+      float avg = sum / samples_read;
+      for(int i=0; i < samples_read; i++) {
+        Serial.println(samples[i] - avg);
+      }
 //      float rms = 0;
 //      for(int i=0; i < nsamples; i++) {
 //        float p = samples[i * 2 + 1] - avg;
@@ -72,5 +74,6 @@ void loop() {
 //      }
 //      float spl = 20 * log10f(sqrtf(rms / nsamples));
 //      Serial.println(spl);
+      delay(READ_DELAY);
     }
 }
