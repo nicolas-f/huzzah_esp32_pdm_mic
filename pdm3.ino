@@ -3,7 +3,7 @@
 
 #define READ_DELAY 3000 // millisec
 const i2s_port_t I2S_PORT = I2S_NUM_0;
-const int BLOCK_SIZE = 64;
+const int BLOCK_SIZE = 512;
 int samples[BLOCK_SIZE];
 #define SAMPLE_RATE 24000
 long total_read = 0;
@@ -49,7 +49,7 @@ void init_pdm() {
          .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // although the SEL config should be left, it seems to transmit on right
          .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_LSB),
          .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, // high interrupt priority
-         .dma_buf_count = 8,
+         .dma_buf_count = 4,
          .dma_buf_len = BLOCK_SIZE
         };
     
