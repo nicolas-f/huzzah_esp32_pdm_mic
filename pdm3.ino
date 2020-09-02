@@ -5,7 +5,7 @@
 const i2s_port_t I2S_PORT = I2S_NUM_0;
 const int BLOCK_SIZE = 512;
 int samples[BLOCK_SIZE];
-#define SAMPLE_RATE 24000
+#define SAMPLE_RATE 48000
 long total_read = 0;
 
 // http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=be&passmode=hp&order=2&usesr=usesr&sr=24000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=float&run=Send
@@ -103,7 +103,7 @@ void process_samples(void *pvParameters) {
             for(int i=0; i < samples_read; i++) {
               sample = filter.step((float)samples[i] / INT_MAX);
               //sample = (float)samples[i] / INT_MAX;
-              *buff = (short)(sample * SHRT_MAX);
+              *buff = (short)(sample * (SHRT_MAX / 4));
               Serial.write(buff, sizeof(short));
             }
             //      float rms = 0;
