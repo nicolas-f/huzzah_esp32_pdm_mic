@@ -80,6 +80,7 @@ void init_pdm() {
 
 void setup() {
     Serial.begin(2000000);
+    while(!Serial){}
     // Initialize the I2S peripheral
     init_pdm();
     // Create a task that will read the data
@@ -98,10 +99,12 @@ void process_samples(void *pvParameters) {
             int samples_read = num_bytes_read / 4;
             total_read += samples_read;
             float sample;
+            unsigned char buff[sizeof(short)];
             for(int i=0; i < samples_read; i++) {
               sample = filter.step((float)samples[i] / INT_MAX);
               //sample = (float)samples[i] / INT_MAX;
-              Serial.println((short)(sample * SHRT_MAX));
+              *buff = (short)(sample * SHRT_MAX);
+              Serial.write(buff, sizeof(short));
             }
             //      float rms = 0;
             //      for(int i=0; i < nsamples; i++) {
