@@ -5,42 +5,40 @@
 const i2s_port_t I2S_PORT = I2S_NUM_0;
 const int BLOCK_SIZE = 512;
 int samples[BLOCK_SIZE];
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE 24000
 long total_read = 0;
 
-// http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=be&passmode=hp&order=2&usesr=usesr&sr=48000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=long&bitres=10&run=Send
-// High pass bessel filter order=2 alpha1=0.0020833333333333
-class FilterBeHp2
-{
-	public:
-		FilterBeHp2()
-		{
-			for(int i=0; i <= 2; i++)
-				v[i]=0;
-		}
-	private:
-		short v[3];
-	public:
-		short step(short x)
-		{
-			v[0] = v[1];
-			v[1] = v[2];
-			long tmp = ((((x * 2078572L) >>  1)	//= (   9.9114058280e-1 * x)
-				+ ((v[0] * -2060103L) >> 1)	//+( -0.9823336472*v[0])
-				+ (v[1] * 2078517L)	//+(  1.9822286840*v[1])
-				)+524288) >> 20; // round and downshift fixed point /1048576
+//http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=bu&passmode=hp&order=1&usesr=usesr&sr=16000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=float&run=Send
 
-			v[2]= (short)tmp;
-			return (short)((
-				 (v[0] + v[2])
-				- 2 * v[1])); // 2^
-		}
+//High pass butterworth filter order=2 alpha1=0.0041666666666667 
+class  FilterBuHp2
+{
+  public:
+    FilterBuHp2()
+    {
+      v[0]=0.0f;
+      v[1]=0.0f;
+    }
+  private:
+    float v[3];
+  public:
+    float step(float x) //class II 
+    {
+      v[0] = v[1];
+      v[1] = v[2];
+      v[2] = (9.816582684032610917e-1f * x)
+         + (-0.96365298422370504472f * v[0])
+         + (1.96298008938933921108f * v[1]);
+      return 
+         (v[0] + v[2])
+        - 2.0f * v[1];
+    }
 };
 
 
 
 
-FilterBeHp2 filter;
+FilterBuHp2 filter;
 
 void init_pdm() {
   
@@ -102,13 +100,14 @@ void process_samples(void *pvParameters) {
             
             int samples_read = num_bytes_read / 4;
             total_read += samples_read;
+            unsigned char buff[sizeof(float)];
             float sample;
-            unsigned char buff[sizeof(short)];
             for(int i=0; i < samples_read; i++) {
-              // sample = filter.step((float)samples[i] / INT_MAX);
-              // sample = (float)samples[i] / INT_MAX;
-              *buff = filter.step((short)(sample / 65538));
-              Serial.write(buff, sizeof(short));
+              sample = filter.step((float)samples[i] / 134217728);
+              sample = max(-1.0f, min(1.0f, sample));
+              //Serial.println(sample * 100.0f);
+              memcpy(buff, &sample, sizeof(sample));
+              Serial.write(buff, sizeof(sample));
             }
             //      float rms = 0;
             //      for(int i=0; i < nsamples; i++) {

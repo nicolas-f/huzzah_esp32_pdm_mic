@@ -15,9 +15,9 @@ if len(ports) > 0:
     # on établit la communication série
     arduino = serial.Serial(ports[0].device, baud, timeout=1)
 
-    max_samples = 48000 * 10
-    sample_size = 2
-    bufferlength = 512 * sample_size
+    max_samples = 24000 * 10
+    sample_size = 4
+    bufferlength = 128 * sample_size
     with open("audio.raw", "wb") as f:
         while True:
             f.write(arduino.read(bufferlength))
