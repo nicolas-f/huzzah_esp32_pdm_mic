@@ -17,7 +17,7 @@ if len(ports) > 0:
 
     max_samples = 32000 * 10
     sample_size = 4
-    bufferlength = 128 * sample_size
+    bufferlength = 64 * sample_size
     with open("audio.raw", "wb") as f:
         while True:
             f.write(arduino.read(bufferlength))

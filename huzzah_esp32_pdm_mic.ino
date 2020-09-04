@@ -3,7 +3,7 @@
 
 #define READ_DELAY 3000 // millisec
 const i2s_port_t I2S_PORT = I2S_NUM_0;
-const int BLOCK_SIZE = 512;
+const int BLOCK_SIZE = 64;
 int samples[BLOCK_SIZE];
 #define SAMPLE_RATE 32000
 long total_read = 0;
@@ -29,6 +29,8 @@ class  FilterBuHp1
     }
 };
 FilterBuHp1 filter;
+float windowSum = 0;
+int windowLength = 0;
 
 void init_pdm() {
   
@@ -41,9 +43,9 @@ void init_pdm() {
          .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // although the SEL config should be left, it seems to transmit on right
          .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S),
          .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, // high interrupt priority
-         .dma_buf_count = 4,
+         .dma_buf_count = 8,
          .dma_buf_len = BLOCK_SIZE,
-         .use_apll = true
+         .use_apll = false
         };
     
     // This function must be called before any I2S driver read/write operations.
@@ -94,20 +96,22 @@ void process_samples(void *pvParameters) {
             total_read += samples_read;
             unsigned char buff[sizeof(float)];
             float sample;
+            float rms = 0;
             for(int i=0; i < samples_read; i++) {
               sample = filter.step((float)samples[i] / 134217728);
               sample = max(-1.0f, min(1.0f, sample));
-              //Serial.println(sample * 100.0f);
-              memcpy(buff, &sample, sizeof(sample));
-              Serial.write(buff, sizeof(sample));
+              rms += sample * sample;              
+              // memcpy(buff, &sample, sizeof(sample));
+              // Serial.write(buff, sizeof(sample));
             }
-            //      float rms = 0;
-            //      for(int i=0; i < nsamples; i++) {
-            //        float p = samples[i * 2 + 1] - avg;
-            //        rms = p * p; 
-            //      }
-            //      float spl = 20 * log10f(sqrtf(rms / nsamples));
-            //      Serial.println(spl);
+            windowSum += rms;
+            windowLength += samples_read;
+            if(windowLength >= SAMPLE_RATE * 0.125) {
+              float spl = 20 * log10f(sqrtf(windowSum / windowLength));
+              Serial.println(spl);
+              windowSum = 0;
+              windowLength = 0;
+            }
           }
     }
 }
