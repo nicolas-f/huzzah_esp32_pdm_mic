@@ -8,37 +8,57 @@ int samples[BLOCK_SIZE];
 #define SAMPLE_RATE 24000
 long total_read = 0;
 
-//http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=bu&passmode=hp&order=1&usesr=usesr&sr=16000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=float&run=Send
-
-//High pass butterworth filter order=2 alpha1=0.0041666666666667 
-class  FilterBuHp2
+//Band pass chebyshev filter order=2 alpha1=0.0041666666666667 alpha2=0.33333333333333 
+class  FilterChBp2
 {
   public:
-    FilterBuHp2()
+    FilterChBp2()
     {
-      v[0]=0.0f;
-      v[1]=0.0f;
+      for(int i=0; i <= 4; i++)
+        v[i]=0.0;
     }
   private:
-    float v[3];
+    float v[5];
   public:
     float step(float x) //class II 
     {
       v[0] = v[1];
       v[1] = v[2];
-      v[2] = (9.816582684032610917e-1f * x)
-         + (-0.96365298422370504472f * v[0])
-         + (1.96298008938933921108f * v[1]);
+      v[2] = v[3];
+      v[3] = v[4];
+      v[4] = (4.429779238542387865e-1f * x)
+         + (-0.46917260013030709365f * v[0])
+         + (0.42868712574517803260f * v[1])
+         + (-0.40470610863679584712f * v[2])
+         + (1.44326584862601769998f * v[3]);
       return 
-         (v[0] + v[2])
-        - 2.0f * v[1];
+         (v[0] + v[4])
+        - 2 * v[2];
     }
 };
 
+//High pass butterworth filter order=1 alpha1=0.0010416666666667 
+//class  FilterBuHp1
+//{
+//  public:
+//    FilterBuHp1()
+//    {
+//      v[0]=0.0;
+//    }
+//  private:
+//    float v[2];
+//  public:
+//    float step(float x) //class II 
+//    {
+//      v[0] = v[1];
+//      v[1] = (9.967381703212957467e-1f * x)
+//         + (0.99347634064259171538f * v[0]);
+//      return 
+//         (v[1] - v[0]);
+//    }
+//};
 
-
-
-FilterBuHp2 filter;
+FilterChBp2 filter;
 
 void init_pdm() {
   
@@ -49,10 +69,11 @@ void init_pdm() {
          .sample_rate = SAMPLE_RATE,
          .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
          .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // although the SEL config should be left, it seems to transmit on right
-         .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_LSB),
+         .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S),
          .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, // high interrupt priority
          .dma_buf_count = 4,
-         .dma_buf_len = BLOCK_SIZE
+         .dma_buf_len = BLOCK_SIZE,
+         .use_apll = true
         };
     
     // This function must be called before any I2S driver read/write operations.
@@ -82,7 +103,8 @@ void init_pdm() {
 
 void setup() {
     Serial.begin(2000000);
-    while(!Serial){}
+    delay(1000);
+    while(!Serial){ delay(5);}
     // Initialize the I2S peripheral
     init_pdm();
     // Create a task that will read the data
