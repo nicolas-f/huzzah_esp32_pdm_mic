@@ -8,31 +8,35 @@ int samples[BLOCK_SIZE];
 #define SAMPLE_RATE 48000
 long total_read = 0;
 
-// http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=be&passmode=hp&order=2&usesr=usesr&sr=24000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=float&run=Send
-//High pass bessel filter order=2 alpha1=0.0041666666666667 
-class  FilterBeHp2
+// http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=be&passmode=hp&order=2&usesr=usesr&sr=48000&frequencyLow=100&noteLow=&noteHigh=&pw=pw&calctype=long&bitres=10&run=Send
+// High pass bessel filter order=2 alpha1=0.0020833333333333
+class FilterBeHp2
 {
-  public:
-    FilterBeHp2()
-    {
-      v[0]=0.0;
-      v[1]=0.0;
-    }
-  private:
-    float v[3];
-  public:
-    float step(float x) //class II 
-    {
-      v[0] = v[1];
-      v[1] = v[2];
-      v[2] = (9.823849154958753660e-1 * x)
-         + (-0.96497792085018785357 * v[0])
-         + (1.96456174113331383246 * v[1]);
-      return 
-         (v[0] + v[2])
-        - 2 * v[1];
-    }
+	public:
+		FilterBeHp2()
+		{
+			for(int i=0; i <= 2; i++)
+				v[i]=0;
+		}
+	private:
+		short v[3];
+	public:
+		short step(short x)
+		{
+			v[0] = v[1];
+			v[1] = v[2];
+			long tmp = ((((x * 2078572L) >>  1)	//= (   9.9114058280e-1 * x)
+				+ ((v[0] * -2060103L) >> 1)	//+( -0.9823336472*v[0])
+				+ (v[1] * 2078517L)	//+(  1.9822286840*v[1])
+				)+524288) >> 20; // round and downshift fixed point /1048576
+
+			v[2]= (short)tmp;
+			return (short)((
+				 (v[0] + v[2])
+				- 2 * v[1])); // 2^
+		}
 };
+
 
 
 
@@ -101,9 +105,9 @@ void process_samples(void *pvParameters) {
             float sample;
             unsigned char buff[sizeof(short)];
             for(int i=0; i < samples_read; i++) {
-              sample = filter.step((float)samples[i] / INT_MAX);
-              //sample = (float)samples[i] / INT_MAX;
-              *buff = (short)(sample * (SHRT_MAX / 4));
+              // sample = filter.step((float)samples[i] / INT_MAX);
+              // sample = (float)samples[i] / INT_MAX;
+              *buff = filter.step((short)(sample / 65538));
               Serial.write(buff, sizeof(short));
             }
             //      float rms = 0;
