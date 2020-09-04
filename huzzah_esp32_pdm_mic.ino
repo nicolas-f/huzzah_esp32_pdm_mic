@@ -5,60 +5,30 @@
 const i2s_port_t I2S_PORT = I2S_NUM_0;
 const int BLOCK_SIZE = 512;
 int samples[BLOCK_SIZE];
-#define SAMPLE_RATE 24000
+#define SAMPLE_RATE 32000
 long total_read = 0;
-
-//Band pass chebyshev filter order=2 alpha1=0.0041666666666667 alpha2=0.33333333333333 
-class  FilterChBp2
+// http://www.schwietering.com/jayduino/filtuino/index.php?characteristic=bu&passmode=hp&order=1&usesr=usesr&sr=32000&frequencyLow=400&noteLow=&noteHigh=&pw=pw&calctype=float&run=Send
+//High pass butterworth filter order=1 alpha1=0.0125 
+class  FilterBuHp1
 {
   public:
-    FilterChBp2()
+    FilterBuHp1()
     {
-      for(int i=0; i <= 4; i++)
-        v[i]=0.0;
+      v[0]=0.0;
     }
   private:
-    float v[5];
+    float v[2];
   public:
     float step(float x) //class II 
     {
       v[0] = v[1];
-      v[1] = v[2];
-      v[2] = v[3];
-      v[3] = v[4];
-      v[4] = (4.429779238542387865e-1f * x)
-         + (-0.46917260013030709365f * v[0])
-         + (0.42868712574517803260f * v[1])
-         + (-0.40470610863679584712f * v[2])
-         + (1.44326584862601769998f * v[3]);
+      v[1] = (9.621952458291035404e-1f * x)
+         + (0.92439049165820696974f * v[0]);
       return 
-         (v[0] + v[4])
-        - 2 * v[2];
+         (v[1] - v[0]);
     }
 };
-
-//High pass butterworth filter order=1 alpha1=0.0010416666666667 
-//class  FilterBuHp1
-//{
-//  public:
-//    FilterBuHp1()
-//    {
-//      v[0]=0.0;
-//    }
-//  private:
-//    float v[2];
-//  public:
-//    float step(float x) //class II 
-//    {
-//      v[0] = v[1];
-//      v[1] = (9.967381703212957467e-1f * x)
-//         + (0.99347634064259171538f * v[0]);
-//      return 
-//         (v[1] - v[0]);
-//    }
-//};
-
-FilterChBp2 filter;
+FilterBuHp1 filter;
 
 void init_pdm() {
   
