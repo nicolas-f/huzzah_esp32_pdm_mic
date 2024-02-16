@@ -89,7 +89,7 @@ void setup() {
 void process_samples(void *pvParameters) {
   
     while(1){
-      int num_bytes_read = i2s_read_bytes(I2S_PORT, 
+      int num_bytes_read = i2s_read(I2S_PORT, 
                                           (char *)samples, 
                                           BLOCK_SIZE,     // the doc says bytes, but its elements.
                                           portMAX_DELAY); // no timeout
